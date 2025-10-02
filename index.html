@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>我的小游戏合集</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: linear-gradient(135deg, #1a2a6c, #b21f1f, #1a2a6c);
+      color: white;
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 50px;
+    }
+    .header h1 {
+      font-size: 3.2em;
+      margin-bottom: 10px;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    .header p {
+      font-size: 1.2em;
+      opacity: 0.9;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    .games {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 30px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    .game-card {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 25px;
+      width: 320px;
+      text-align: center;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+    .game-card:hover {
+      transform: translateY(-10px);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+    }
+    .game-card h2 {
+      font-size: 1.8em;
+      margin: 20px 0 15px;
+      color: #ffcc00;
+    }
+    .game-card p {
+      margin: 15px 0;
+      line-height: 1.6;
+      color: #e0e0ff;
+    }
+    .play-btn {
+      background: #ff6b6b;
+      color: white;
+      border: none;
+      padding: 12px 30px;
+      font-size: 1.1em;
+      border-radius: 50px;
+      cursor: pointer;
+      margin-top: 15px;
+      transition: all 0.3s;
+      font-weight: bold;
+      box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+    }
+    .play-btn:hover {
+      background: #ff5252;
+      transform: scale(1.05);
+    }
+    .footer {
+      text-align: center;
+      margin-top: 60px;
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 0.9em;
+    }
+    @media (max-width: 700px) {
+      .games {
+        flex-direction: column;
+        align-items: center;
+      }
+      .header h1 {
+        font-size: 2.5em;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>我的小游戏合集</h1>
+    <p>两款精心制作的静态网页游戏，无需安装，点开即玩。</p>
+  </div>
+
+  <div class="games">
+    <!-- AI预言家 -->
+    <div class="game-card">
+      <h2>AI预言家</h2>
+      <p>向神秘AI提问，获取命运的启示。适合迷茫时来一卦！</p>
+      <button class="play-btn" onclick="openGame('ai-prophet.html')">开始占卜</button>
+    </div>
+
+    <!-- 2048 -->
+    <div class="game-card">
+      <h2>2048</h2>
+      <p>滑动合并数字，挑战2048！经典益智，越玩越上头。</p>
+      <button class="play-btn" onclick="openGame('2048.html')">开始游戏</button>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>所有游戏均为静态网页，数据保存在本地。Made with love</p>
+  </div>
+
+  <script>
+    function openGame(filename) {
+      const newWindow = window.open(filename, '_blank');
+      if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+        alert('请允许弹出窗口，或手动打开：' + filename);
+      }
+    }
+  </script>
+</body>
+</html>

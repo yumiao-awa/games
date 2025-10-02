@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>🔮 AI预言家</title>
+  <style>
+    body {
+      background: #0f0c29;
+      color: #e0e0ff;
+      font-family: 'Segoe UI', sans-serif;
+      text-align: center;
+      padding: 40px 20px;
+      margin: 0;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: rgba(15, 12, 41, 0.8);
+      padding: 30px;
+      border-radius: 20px;
+      box-shadow: 0 0 30px #8a2be2;
+    }
+    h1 {
+      font-size: 2.5em;
+      margin-bottom: 20px;
+      color: #ff7eff;
+    }
+    input {
+      width: 80%;
+      padding: 12px;
+      margin: 15px 0;
+      border: none;
+      border-radius: 30px;
+      background: #2c264a;
+      color: white;
+      font-size: 16px;
+    }
+    button {
+      background: #8a2be2;
+      color: white;
+      border: none;
+      padding: 12px 30px;
+      border-radius: 30px;
+      font-size: 18px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    button:hover {
+      background: #ff7eff;
+      transform: scale(1.05);
+    }
+    #answer {
+      margin-top: 30px;
+      font-size: 1.4em;
+      min-height: 60px;
+      color: #ffccff;
+      line-height: 1.6;
+    }
+    .crystal {
+      font-size: 4em;
+      margin: 20px 0;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔮 AI预言家</h1>
+    <div class="crystal">🔮</div>
+    <p>向宇宙提问，AI将为你揭示命运…</p>
+    <input type="text" id="question" placeholder="例如：我会发财吗？" maxlength="50">
+    <br>
+    <button onclick="ask()">揭示命运</button>
+    <div id="answer"></div>
+  </div>
+
+  <script>
+    const answers = [
+      "命运之轮正在转动…答案是：**是的**。",
+      "星辰低语：**否**，但另有转机。",
+      "你内心已有答案，只是不敢相信。",
+      "时机未到，静待花开。",
+      "大胆行动，宇宙站在你这边！",
+      "小心身边穿红衣服的人。",
+      "不是现在，但三个月后会有惊喜。",
+      "你的努力会被看见，坚持下去。",
+      "放下执念，答案自现。",
+      "是的，但代价是你未曾预料的。",
+      "镜子中的你，知道真相。",
+      "风带来了好消息，留意下周三。",
+      "不，除非你先原谅自己。",
+      "命运说：**一切皆有可能**。",
+      "这个问题…连AI也沉默了。"
+    ];
+
+    function ask() {
+      const q = document.getElementById('question').value.trim();
+      const answerEl = document.getElementById('answer');
+      
+      if (!q) {
+        answerEl.innerHTML = "🔮 请先提出你的问题…";
+        return;
+      }
+
+      // 简单防刷：加个延迟
+      answerEl.innerHTML = "🔮 宇宙正在回应…";
+      setTimeout(() => {
+        const randomAnswer = answers[Math.floor(Math.random() * answers.length)];
+        answerEl.innerHTML = randomAnswer;
+      }, 800);
+    }
+
+    // 回车提交
+    document.getElementById('question').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') ask();
+    });
+  </script>
+</body>
+</html>
