@@ -237,9 +237,9 @@
     // 键盘控制
     document.addEventListener('keydown', (e) => {
       if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
-        move('up');
-      } else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
         move('down');
+      } else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
+        move('up');
       } else if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
         move('left');
       } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
