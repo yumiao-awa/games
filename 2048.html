@@ -40,7 +40,6 @@
       transition: all 0.1s ease;
       border-radius: 3px;
     }
-    /* 颜色规则 */
     .tile-2 { background: #eee4da; }
     .tile-4 { background: #ede0c8; }
     .tile-8 { background: #f2b179; color: white; }
@@ -82,167 +81,175 @@
   <button id="restart">重新开始</button>
   <div id="instructions">使用方向键或 WASD 移动方块</div>
 
-<script>
-  const SIZE = 4;
-  let board = [];
-  let score = 0;
+  <script>
+    const SIZE = 4;
+    let board = [];
+    let score = 0;
 
-  function init() {
-    board = Array(SIZE).fill().map(() => Array(SIZE).fill(0));
-    score = 0;
-    addRandomTile();
-    addRandomTile();
-    render();
-  }
-
-  function addRandomTile() {
-    const empty = [];
-    for (let r = 0; r < SIZE; r++) {
-      for (let c = 0; c < SIZE; c++) {
-        if (board[r][c] === 0) empty.push({r, c});
-      }
-    }
-    if (empty.length > 0) {
-      const {r, c} = empty[Math.floor(Math.random() * empty.length)];
-      board[r][c] = Math.random() < 0.9 ? 2 : 4;
-    }
-  }
-
-  function render() {
-    const gameEl = document.getElementById('game');
-    gameEl.innerHTML = '';
-    
-    for (let r = 0; r < SIZE; r++) {
-      for (let c = 0; c < SIZE; c++) {
-        const cell = document.createElement('div');
-        cell.className = 'cell';
-        cell.style.left = (c * 75 + 15) + 'px';
-        cell.style.top = (r * 75 + 15) + 'px';
-        gameEl.appendChild(cell);
-      }
-    }
-
-    for (let r = 0; r < SIZE; r++) {
-      for (let c = 0; c < SIZE; c++) {
-        if (board[r][c] !== 0) {
-          const tile = document.createElement('div');
-          tile.className = `tile tile-${board[r][c]}`;
-          tile.textContent = board[r][c];
-          tile.style.left = (c * 75 + 15) + 'px';
-          tile.style.top = (r * 75 + 15) + 'px';
-          gameEl.appendChild(tile);
-        }
-      }
-    }
-
-    document.getElementById('score').textContent = `得分: ${score}`;
-  }
-
-  function rotate(board) {
-    const N = board.length;
-    const newBoard = Array(N).fill().map(() => Array(N).fill(0));
-    for (let r = 0; r < N; r++) {
-      for (let c = 0; c < N; c++) {
-        newBoard[c][N - 1 - r] = board[r][c];
-      }
-    }
-    return newBoard;
-  }
-
-  function moveLeft(board) {
-    let newBoard = [];
-    for (let r = 0; r < SIZE; r++) {
-      let row = board[r].filter(val => val !== 0);
-      let newRow = [];
-      let i = 0;
-      while (i < row.length) {
-        if (i + 1 < row.length && row[i] === row[i + 1]) {
-          const merged = row[i] * 2;
-          newRow.push(merged);
-          score += merged;
-          i += 2;
-        } else {
-          newRow.push(row[i]);
-          i++;
-        }
-      }
-      while (newRow.length < SIZE) newRow.push(0);
-      newBoard.push(newRow);
-    }
-    return newBoard;
-  }
-
-  function move(direction) {
-    let moved = false;
-    let newBoard = JSON.parse(JSON.stringify(board));
-
-    if (direction === 'left') {
-      newBoard = moveLeft(newBoard);
-    } else if (direction === 'right') {
-      newBoard = rotate(rotate(newBoard));
-      newBoard = moveLeft(newBoard);
-      newBoard = rotate(rotate(newBoard));
-    } else if (direction === 'up') {
-      newBoard = rotate(newBoard);
-      newBoard = moveLeft(newBoard);
-      newBoard = rotate(rotate(rotate(newBoard)));
-    } else if (direction === 'down') {
-      newBoard = rotate(rotate(rotate(newBoard)));
-      newBoard = moveLeft(newBoard);
-      newBoard = rotate(newBoard);
-    }
-
-    if (JSON.stringify(board) !== JSON.stringify(newBoard)) {
-      board = newBoard;
-      moved = true;
-    }
-
-    if (moved) {
+    function init() {
+      board = Array(SIZE).fill().map(() => Array(SIZE).fill(0));
+      score = 0;
+      addRandomTile();
       addRandomTile();
       render();
-      if (isGameOver()) {
-        setTimeout(() => alert('游戏结束！\n最终得分: ' + score), 300);
-      }
     }
-  }
 
-  function isGameOver() {
-    for (let r = 0; r < SIZE; r++) {
-      for (let c = 0; c < SIZE; c++) {
-        if (board[r][c] === 0) return false;
+    function addRandomTile() {
+      const empty = [];
+      for (let r = 0; r < SIZE; r++) {
+        for (let c = 0; c < SIZE; c++) {
+          if (board[r][c] === 0) empty.push({r, c});
+        }
+      }
+      if (empty.length > 0) {
+        const {r, c} = empty[Math.floor(Math.random() * empty.length)];
+        board[r][c] = Math.random() < 0.9 ? 2 : 4;
       }
     }
-    for (let r = 0; r < SIZE; r++) {
-      for (let c = 0; c < SIZE; c++) {
-        if (
-          (r > 0 && board[r][c] === board[r-1][c]) ||
-          (r < SIZE-1 && board[r][c] === board[r+1][c]) ||
-          (c > 0 && board[r][c] === board[r][c-1]) ||
-          (c < SIZE-1 && board[r][c] === board[r][c+1])
-        ) return false;
-      }
-    }
-    return true;
-  }
 
-  function restartGame() {
+    function render() {
+      const gameEl = document.getElementById('game');
+      gameEl.innerHTML = '';
+      
+      for (let r = 0; r < SIZE; r++) {
+        for (let c = 0; c < SIZE; c++) {
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+          cell.style.left = (c * 75 + 15) + 'px';
+          cell.style.top = (r * 75 + 15) + 'px';
+          gameEl.appendChild(cell);
+        }
+      }
+
+      for (let r = 0; r < SIZE; r++) {
+        for (let c = 0; c < SIZE; c++) {
+          if (board[r][c] !== 0) {
+            const tile = document.createElement('div');
+            tile.className = `tile tile-${board[r][c]}`;
+            tile.textContent = board[r][c];
+            tile.style.left = (c * 75 + 15) + 'px';
+            tile.style.top = (r * 75 + 15) + 'px';
+            gameEl.appendChild(tile);
+          }
+        }
+      }
+
+      document.getElementById('score').textContent = `得分: ${score}`;
+    }
+
+    // 顺时针旋转90度
+    function rotateClockwise(board) {
+      const N = board.length;
+      const newBoard = Array(N).fill().map(() => Array(N).fill(0));
+      for (let r = 0; r < N; r++) {
+        for (let c = 0; c < N; c++) {
+          newBoard[c][N - 1 - r] = board[r][c];
+        }
+      }
+      return newBoard;
+    }
+
+    // 向左合并逻辑
+    function moveLeft(board) {
+      let newBoard = [];
+      for (let r = 0; r < SIZE; r++) {
+        let row = board[r].filter(val => val !== 0);
+        let newRow = [];
+        let i = 0;
+        while (i < row.length) {
+          if (i + 1 < row.length && row[i] === row[i + 1]) {
+            const merged = row[i] * 2;
+            newRow.push(merged);
+            score += merged;
+            i += 2;
+          } else {
+            newRow.push(row[i]);
+            i++;
+          }
+        }
+        while (newRow.length < SIZE) newRow.push(0);
+        newBoard.push(newRow);
+      }
+      return newBoard;
+    }
+
+    // 方向移动主函数
+    function move(direction) {
+      let newBoard = JSON.parse(JSON.stringify(board));
+      let moved = false;
+
+      if (direction === 'left') {
+        newBoard = moveLeft(newBoard);
+      } else if (direction === 'right') {
+        // 右 = 旋转180 → 左移 → 旋转180
+        newBoard = rotateClockwise(rotateClockwise(newBoard));
+        newBoard = moveLeft(newBoard);
+        newBoard = rotateClockwise(rotateClockwise(newBoard));
+      } else if (direction === 'up') {
+        // 上 = 顺时针旋转90° → 左移 → 逆时针旋转90°（即再转3次）
+        newBoard = rotateClockwise(newBoard);
+        newBoard = moveLeft(newBoard);
+        newBoard = rotateClockwise(rotateClockwise(rotateClockwise(newBoard)));
+      } else if (direction === 'down') {
+        // 下 = 顺时针旋转270°（即3次）→ 左移 → 顺时针旋转90°（1次）
+        newBoard = rotateClockwise(rotateClockwise(rotateClockwise(newBoard)));
+        newBoard = moveLeft(newBoard);
+        newBoard = rotateClockwise(newBoard);
+      }
+
+      if (JSON.stringify(board) !== JSON.stringify(newBoard)) {
+        board = newBoard;
+        moved = true;
+      }
+
+      if (moved) {
+        addRandomTile();
+        render();
+        if (isGameOver()) {
+          setTimeout(() => alert('游戏结束！\n最终得分: ' + score), 300);
+        }
+      }
+    }
+
+    function isGameOver() {
+      for (let r = 0; r < SIZE; r++) {
+        for (let c = 0; c < SIZE; c++) {
+          if (board[r][c] === 0) return false;
+        }
+      }
+      for (let r = 0; r < SIZE; r++) {
+        for (let c = 0; c < SIZE; c++) {
+          if (
+            (r > 0 && board[r][c] === board[r-1][c]) ||
+            (r < SIZE-1 && board[r][c] === board[r+1][c]) ||
+            (c > 0 && board[r][c] === board[r][c-1]) ||
+            (c < SIZE-1 && board[r][c] === board[r][c+1])
+          ) return false;
+        }
+      }
+      return true;
+    }
+
+    function restartGame() {
+      init();
+    }
+
+    // 键盘控制
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
+        move('up');
+      } else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
+        move('down');
+      } else if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+        move('left');
+      } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+        move('right');
+      }
+    });
+
+    document.getElementById('restart').addEventListener('click', restartGame);
+
     init();
-  }
-
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowUp')    move('up');
-    if (e.key === 'ArrowRight') move('right');
-    if (e.key === 'ArrowDown')  move('down');
-    if (e.key === 'ArrowLeft')  move('left');
-    if (e.key === 'w' || e.key === 'W') move('up');
-    if (e.key === 'd' || e.key === 'D') move('right');
-    if (e.key === 's' || e.key === 'S') move('down');
-    if (e.key === 'a' || e.key === 'A') move('left');
-  });
-
-  document.getElementById('restart').addEventListener('click', restartGame);
-
-  init();
-</script>
+  </script>
 </body>
 </html>
