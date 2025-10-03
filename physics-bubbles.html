@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>物理泡泡乐园</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      background: linear-gradient(135deg, #e3f2fd, #f3e5f5);
+      min-height: 100vh;
+      overflow: hidden;
+      font-family: 'Segoe UI', sans-serif;
+      cursor: pointer;
+    }
+    #title {
+      text-align: center;
+      padding: 15px 0;
+      color: #5d4037;
+      font-size: 1.6em;
+      text-shadow: 0 1px 2px rgba(255,255,255,0.6);
+      pointer-events: none;
+    }
+    #instructions {
+      text-align: center;
+      color: #777;
+      margin-bottom: 10px;
+      font-size: 1em;
+      pointer-events: none;
+    }
+    .bubble {
+      position: absolute;
+      border-radius: 50%;
+      user-select: none;
+      box-shadow: 
+        inset 0 -6px 10px rgba(255,255,255,0.6),
+        0 2px 6px rgba(0,0,0,0.1);
+    }
+    .particle {
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+      opacity: 0.7;
+    }
+    .preview {
+      position: absolute;
+      border-radius: 50%;
+      border: 2px dashed #9c27b0;
+      background: rgba(156, 39, 176, 0.1);
+      pointer-events: none;
+      display: none;
+    }
+    .size-label {
+      position: absolute;
+      background: rgba(0,0,0,0.6);
+      color: white;
+      padding: 2px 6px;
+      border-radius: 10px;
+      font-size: 12px;
+      pointer-events: none;
+      white-space: nowrap;
+      transform: translate(-50%, -120%);
+    }
+    #toggle-sound {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(255, 255, 255, 0.7);
+      border: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      font-size: 18px;
+      cursor: pointer;
+      backdrop-filter: blur(5px);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      z-index: 100;
+    }
+  </style>
+</head>
+<body>
+  <div id="title">🌈 物理泡泡乐园</div>
+  <div id="instructions">点击：随机泡泡｜长按：自定义大小（按越久越大）</div>
+  <button id="toggle-sound">🔊</button>
+
+  <script>
+    const GRAVITY = 0.2;
+    const BOUNCE = 0.85;
+    const FRICTION = 0.99;
+    const MAX_RADIUS = 100;
+    const GROW_SPEED = 2;
+
+    const colors = [
+      '#ff9e9e', '#a3cfff', '#a8e6cf', '#ffd3b6', 
+      '#f093fb', '#b2fefa', '#ffaaa5', '#d4fc79'
+    ];
+
+    let soundEnabled = true;
+    let bubbles = [];
+    let particles = [];
+    let previewBubble = null;
+    let sizeLabel = null;
+    let isPressing = false;
+    let pressTimer = null;
+    let currentRadius = 20;
+    let pressX = 0;
+    let pressY = 0;
+    let isLongPress = false;
+
+    const audioContext = typeof window.AudioContext !== 'undefined' 
+      ? new (window.AudioContext || window.webkitAudioContext)() 
+      : null;
+
+    function playPopSound(pitch = 300) {
+      if (!soundEnabled || !audioContext) return;
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(pitch, audioContext.currentTime);
+      gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      oscillator.start();
+      oscillator.stop(audioContext.currentTime + 0.2);
+    }
+
+    function createPreview(x, y) {
+      previewBubble = document.createElement('div');
+      previewBubble.className = 'preview';
+      previewBubble.style.left = `${x - currentRadius}px`;
+      previewBubble.style.top = `${y - currentRadius}px`;
+      previewBubble.style.width = `${currentRadius * 2}px`;
+      previewBubble.style.height = `${currentRadius * 2}px`;
+      document.body.appendChild(previewBubble);
+
+      sizeLabel = document.createElement('div');
+      sizeLabel.className = 'size-label';
+      sizeLabel.textContent = `${Math.round(currentRadius)}px`;
+      sizeLabel.style.left = `${x}px`;
+      sizeLabel.style.top = `${y - currentRadius - 10}px`;
+      document.body.appendChild(sizeLabel);
+    }
+
+    function updatePreview() {
+      if (!previewBubble || !sizeLabel) return;
+      previewBubble.style.left = `${pressX - currentRadius}px`;
+      previewBubble.style.top = `${pressY - currentRadius}px`;
+      previewBubble.style.width = `${currentRadius * 2}px`;
+      previewBubble.style.height = `${currentRadius * 2}px`;
+
+      sizeLabel.textContent = `${Math.round(currentRadius)}px`;
+      sizeLabel.style.left = `${pressX}px`;
+      sizeLabel.style.top = `${pressY - currentRadius - 10}px`;
+    }
+
+    function createBubble(x, y, radius = null) {
+      if (radius === null) {
+        radius = 20 + Math.random() * 30;
+      }
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble';
+      bubble.style.width = `${radius * 2}px`;
+      bubble.style.height = `${radius * 2}px`;
+      bubble.style.backgroundColor = color;
+      bubble.style.left = `${x - radius}px`;
+      bubble.style.top = `${y - radius}px`;
+      document.body.appendChild(bubble);
+
+      const obj = {
+        el: bubble,
+        x: x,
+        y: y,
+        vx: (Math.random() - 0.5) * 2,
+        vy: (Math.random() - 0.5) * 2,
+        radius: radius,
+        color: color
+      };
+
+      // 泡泡点击只爆裂
+      bubble.addEventListener('click', (e) => {
+        e.stopPropagation();
+        explodeBubble(obj);
+      });
+
+      bubbles.push(obj);
+      return obj;
+    }
+
+    function explodeBubble(bubble) {
+      const radius = bubble.radius;
+      playPopSound(200 + 100 * (radius / MAX_RADIUS));
+      
+      const particleCount = Math.min(20, Math.floor(8 + radius / 5));
+      const baseParticleSize = 4 + radius / 20;
+
+      for (let i = 0; i < particleCount; i++) {
+        const angle = (Math.PI * 2 * i) / particleCount + (Math.random() - 0.5) * 0.5;
+        const speed = 1 + Math.random() * 2 + radius / 30;
+        const size = baseParticleSize + Math.random() * 3;
+        const particle = document.createElement('div');
+        particle.className = 'particle';
+        particle.style.width = `${size}px`;
+        particle.style.height = `${size}px`;
+        particle.style.backgroundColor = bubble.color;
+        particle.style.left = `${bubble.x - size/2}px`;
+        particle.style.top = `${bubble.y - size/2}px`;
+        document.body.appendChild(particle);
+
+        particles.push({
+          el: particle,
+          x: bubble.x,
+          y: bubble.y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          life: 30 + Math.floor(radius / 3),
+          size: size
+        });
+      }
+
+      const pushRadius = 100 + radius * 1.5;
+      const baseForce = 0.5 + radius / 40;
+
+      bubbles.forEach(other => {
+        if (other === bubble) return;
+        const dx = other.x - bubble.x;
+        const dy = other.y - bubble.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        if (distance < pushRadius && distance > 0) {
+          const force = (1 - distance / pushRadius) * baseForce;
+          other.vx += (dx / distance) * force;
+          other.vy += (dy / distance) * force;
+        }
+      });
+
+      bubble.el.remove();
+      bubbles = bubbles.filter(b => b !== bubble);
+    }
+
+    function updatePhysics() {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+
+      bubbles.forEach(bubble => {
+        bubble.vy += GRAVITY;
+        bubble.vx *= FRICTION;
+        bubble.vy *= FRICTION;
+
+        bubble.x += bubble.vx;
+        bubble.y += bubble.vy;
+
+        if (bubble.x - bubble.radius < 0) {
+          bubble.x = bubble.radius;
+          bubble.vx = -bubble.vx * BOUNCE;
+        } else if (bubble.x + bubble.radius > width) {
+          bubble.x = width - bubble.radius;
+          bubble.vx = -bubble.vx * BOUNCE;
+        }
+
+        if (bubble.y - bubble.radius < 0) {
+          bubble.y = bubble.radius;
+          bubble.vy = -bubble.vy * BOUNCE;
+        } else if (bubble.y + bubble.radius > height) {
+          bubble.y = height - bubble.radius;
+          bubble.vy = -bubble.vy * BOUNCE;
+        }
+
+        bubble.el.style.left = `${bubble.x - bubble.radius}px`;
+        bubble.el.style.top = `${bubble.y - bubble.radius}px`;
+      });
+
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life--;
+        p.vy += 0.1;
+
+        if (p.life <= 0) {
+          p.el.remove();
+          particles.splice(i, 1);
+        } else {
+          p.el.style.left = `${p.x - p.size/2}px`;
+          p.el.style.top = `${p.y - p.size/2}px`;
+          p.el.style.opacity = p.life / 60;
+        }
+      }
+
+      for (let i = 0; i < bubbles.length; i++) {
+        for (let j = i + 1; j < bubbles.length; j++) {
+          const b1 = bubbles[i];
+          const b2 = bubbles[j];
+          const dx = b2.x - b1.x;
+          const dy = b2.y - b1.y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          const minDist = b1.radius + b2.radius;
+
+          if (distance < minDist && distance > 0) {
+            const angle = Math.atan2(dy, dx);
+            const targetX = b1.x + Math.cos(angle) * minDist;
+            const targetY = b1.y + Math.sin(angle) * minDist;
+            
+            const ax = (targetX - b2.x) * 0.05;
+            const ay = (targetY - b2.y) * 0.05;
+            
+            b1.vx -= ax;
+            b1.vy -= ay;
+            b2.vx += ax;
+            b2.vy += ay;
+          }
+        }
+      }
+    }
+
+    function gameLoop() {
+      updatePhysics();
+      requestAnimationFrame(gameLoop);
+    }
+
+    let isTouchDevice = 'ontouchstart' in window;
+
+    function handleStart(e) {
+      e.preventDefault();
+      const clientX = isTouchDevice ? e.touches[0].clientX : e.clientX;
+      const clientY = isTouchDevice ? e.touches[0].clientY : e.clientY;
+      
+      pressX = clientX;
+      pressY = clientY;
+      currentRadius = 20;
+      isPressing = true;
+      isLongPress = false;
+
+      pressTimer = setTimeout(() => {
+        if (isPressing) {
+          isLongPress = true;
+          createPreview(clientX, clientY);
+          const grow = () => {
+            if (!isPressing) return;
+            currentRadius = Math.min(MAX_RADIUS, currentRadius + GROW_SPEED);
+            updatePreview();
+            requestAnimationFrame(grow);
+          };
+          grow();
+        }
+      }, 300);
+    }
+
+    function handleEnd(e) {
+      if (!isPressing) return;
+      e.preventDefault();
+      
+      clearTimeout(pressTimer);
+      isPressing = false;
+      
+      if (isLongPress && previewBubble) {
+        // 长按结束：生成自定义泡泡
+        previewBubble.remove();
+        sizeLabel.remove();
+        previewBubble = null;
+        sizeLabel = null;
+        createBubble(pressX, pressY, currentRadius);
+      } else {
+        // 快速点击：但必须确保不是点在泡泡上
+        const target = isTouchDevice ? e.changedTouches[0].target : e.target;
+        if (!target.classList.contains('bubble') && 
+            target.id !== 'toggle-sound') {
+          createBubble(pressX, pressY);
+        }
+      }
+    }
+
+    function handleMove(e) {
+      if (!isPressing || !isLongPress || !previewBubble) return;
+      e.preventDefault();
+      const clientX = isTouchDevice ? e.touches[0].clientX : e.clientX;
+      const clientY = isTouchDevice ? e.touches[0].clientY : e.clientY;
+      pressX = clientX;
+      pressY = clientY;
+      updatePreview();
+    }
+
+    // 统一事件绑定（不再单独监听 click）
+    if (isTouchDevice) {
+      document.body.addEventListener('touchstart', handleStart, { passive: false });
+      document.body.addEventListener('touchend', handleEnd, { passive: false });
+      document.body.addEventListener('touchmove', handleMove, { passive: false });
+    } else {
+      document.body.addEventListener('mousedown', handleStart);
+      document.body.addEventListener('mouseup', handleEnd);
+      document.body.addEventListener('mousemove', handleMove);
+    }
+
+    document.body.addEventListener('contextmenu', (e) => e.preventDefault());
+
+    document.getElementById('toggle-sound').addEventListener('click', () => {
+      soundEnabled = !soundEnabled;
+      document.getElementById('toggle-sound').textContent = soundEnabled ? '🔊' : '🔇';
+    });
+
+    gameLoop();
+  </script>
+</body>
+</html>
