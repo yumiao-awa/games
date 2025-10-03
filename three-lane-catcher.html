@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>三线接球</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      background: #f5f7fa;
+      font-family: 'Segoe UI', sans-serif;
+      text-align: center;
+      color: #333;
+    }
+    h1 {
+      font-size: 2em;
+      margin-bottom: 10px;
+      color: #4a6fa5;
+    }
+    #score, #high-score {
+      font-size: 1.3em;
+      margin: 8px 0;
+      color: #e74c3c;
+    }
+    #game-area {
+      position: relative;
+      width: 300px;
+      height: 500px;
+      margin: 0 auto;
+      background: #edf2f7;
+      border: 2px solid #cbd5e0;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .lane {
+      position: absolute;
+      width: 100px;
+      height: 100%;
+      top: 0;
+      border-right: 1px dashed #a0aec0;
+    }
+    .lane:last-child {
+      border-right: none;
+    }
+    #player {
+      position: absolute;
+      width: 80px;
+      height: 20px;
+      background: #3182ce;
+      border-radius: 4px;
+      bottom: 20px;
+      left: 110px;
+      transition: left 0.15s ease;
+    }
+    .ball {
+      position: absolute;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+    }
+    .particle {
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    .controls {
+      margin: 15px 0;
+    }
+    .btn {
+      background: #a0aec0;
+      border: none;
+      padding: 10px 20px;
+      margin: 0 8px;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      color: white;
+      font-weight: bold;
+    }
+    .btn:hover {
+      background: #718096;
+    }
+    #instructions {
+      max-width: 300px;
+      margin: 15px auto;
+      font-size: 0.95em;
+      color: #718096;
+    }
+    #game-over {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(245, 247, 250, 0.9);
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 10;
+      font-size: 1.4em;
+      color: #e53e3e;
+    }
+    #restart-btn {
+      margin-top: 20px;
+      padding: 10px 25px;
+      background: #feb2b2;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1.1em;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>三线接球</h1>
+  <div id="score">得分: 0</div>
+  <div id="high-score">最高分: 0</div>
+
+  <div id="game-area">
+    <div class="lane" style="left: 0;"></div>
+    <div class="lane" style="left: 100px;"></div>
+    <div class="lane" style="left: 200px;"></div>
+    <div id="player"></div>
+    <div id="game-over">
+      <div>游戏结束！</div>
+      <div>得分: <span id="final-score">0</span></div>
+      <button id="restart-btn">重新开始</button>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="btn" id="left-btn">← 左</button>
+    <button class="btn" id="right-btn">右 →</button>
+  </div>
+
+  <div id="instructions">
+    按 ← / → 或 A / D 在三条轨道间移动，接住下落的小球！
+  </div>
+
+  <script>
+    const LANE_COUNT = 3;
+    const LANE_WIDTH = 100;
+    const PLAYER_WIDTH = 80;
+    const BALL_SIZE = 30;
+    const PLAYER_Y = 500 - 20 - 20;
+
+    let playerLane = 1;
+    let balls = [];
+    let particles = [];
+    let score = 0;
+    let highScore = localStorage.getItem('catcherHighScore') || 0;
+    let gameRunning = true;
+    let spawnRate = 1500;
+    let lastSpawn = 0; // ✅ 将在 restart 中重置
+
+    const gameArea = document.getElementById('game-area');
+    const player = document.getElementById('player');
+    const scoreEl = document.getElementById('score');
+    const highScoreEl = document.getElementById('high-score');
+
+    highScoreEl.textContent = `最高分: ${highScore}`;
+
+    function updatePlayerPosition() {
+      player.style.left = `${playerLane * LANE_WIDTH + (LANE_WIDTH - PLAYER_WIDTH) / 2}px`;
+    }
+
+    function spawnBall() {
+      const lane = Math.floor(Math.random() * LANE_COUNT);
+      const ball = document.createElement('div');
+      ball.className = 'ball';
+      ball.style.left = `${lane * LANE_WIDTH + (LANE_WIDTH - BALL_SIZE) / 2}px`;
+      ball.style.top = '-30px';
+      
+      const colors = ['#e53e3e', '#38a169', '#d69e2e', '#805ad5', '#dd6b20'];
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      ball.style.backgroundColor = color;
+      
+      gameArea.appendChild(ball);
+      
+      balls.push({
+        el: ball,
+        x: lane,
+        y: -30,
+        speed: 3 + score * 0.02,
+        color: color
+      });
+    }
+
+    // ✨ 创建粒子效果
+    function createParticles(x, y, color) {
+      const particleCount = 8;
+      for (let i = 0; i < particleCount; i++) {
+        const angle = (Math.PI * 2 * i) / particleCount + (Math.random() - 0.5) * 0.5;
+        const speed = 2 + Math.random() * 3;
+        const size = 4 + Math.random() * 4;
+        
+        const particle = document.createElement('div');
+        particle.className = 'particle';
+        particle.style.width = `${size}px`;
+        particle.style.height = `${size}px`;
+        particle.style.backgroundColor = color;
+        particle.style.left = `${x - size/2}px`;
+        particle.style.top = `${y - size/2}px`;
+        gameArea.appendChild(particle);
+        
+        particles.push({
+          el: particle,
+          x: x,
+          y: y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          life: 30,
+          size: size
+        });
+      }
+    }
+
+    function updateBalls() {
+      for (let i = balls.length - 1; i >= 0; i--) {
+        const ball = balls[i];
+        ball.y += ball.speed;
+        ball.el.style.top = `${ball.y}px`;
+
+        if (ball.y > 500) {
+          if (ball.x === playerLane) {
+            // ✅ 接住：产生粒子 + 得分
+            const centerX = ball.x * LANE_WIDTH + LANE_WIDTH / 2;
+            const centerY = 500 - 30; // 球底部位置
+            createParticles(centerX, centerY, ball.color);
+            
+            score += 10;
+            scoreEl.textContent = `得分: ${score}`;
+            ball.el.remove();
+            balls.splice(i, 1);
+            
+            spawnRate = Math.max(500, 1500 - score * 10);
+          } else {
+            // 漏接
+            gameOver();
+            return;
+          }
+        }
+      }
+    }
+
+    function updateParticles() {
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.1; // 重力
+        p.life--;
+        
+        if (p.life <= 0) {
+          p.el.remove();
+          particles.splice(i, 1);
+        } else {
+          p.el.style.left = `${p.x - p.size/2}px`;
+          p.el.style.top = `${p.y - p.size/2}px`;
+          p.el.style.opacity = p.life / 30;
+        }
+      }
+    }
+
+    function gameOver() {
+      gameRunning = false;
+      document.getElementById('final-score').textContent = score;
+      document.getElementById('game-over').style.display = 'flex';
+
+      if (score > highScore) {
+        highScore = score;
+        localStorage.setItem('catcherHighScore', highScore);
+        highScoreEl.textContent = `最高分: ${highScore}`;
+      }
+    }
+
+    function restart() {
+      // ✅ 关键修复：重置 lastSpawn
+      balls.forEach(ball => ball.el.remove());
+      particles.forEach(p => p.el.remove());
+      balls = [];
+      particles = [];
+      score = 0;
+      playerLane = 1;
+      spawnRate = 1500;
+      lastSpawn = 0; // 🚀 修复：重启后能生成新球！
+      gameRunning = true;
+      scoreEl.textContent = `得分: ${score}`;
+      document.getElementById('game-over').style.display = 'none';
+      updatePlayerPosition();
+    }
+
+    function movePlayer(direction) {
+      if (!gameRunning) return;
+      playerLane = Math.max(0, Math.min(LANE_COUNT - 1, playerLane + direction));
+      updatePlayerPosition();
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+        movePlayer(-1);
+      } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+        movePlayer(+1);
+      }
+    });
+
+    document.getElementById('left-btn').addEventListener('click', () => movePlayer(-1));
+    document.getElementById('right-btn').addEventListener('click', () => movePlayer(+1));
+    document.getElementById('restart-btn').addEventListener('click', restart);
+
+    function gameLoop(timestamp) {
+      if (!gameRunning) return;
+
+      if (timestamp - lastSpawn > spawnRate) {
+        spawnBall();
+        lastSpawn = timestamp;
+      }
+
+      updateBalls();
+      updateParticles();
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    updatePlayerPosition();
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>
