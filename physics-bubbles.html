@@ -100,6 +100,8 @@
     ];
 
     let soundEnabled = true;
+    let audioContext = null;
+    let audioUnlocked = false;
     let bubbles = [];
     let particles = [];
     let previewBubble = null;
@@ -112,12 +114,27 @@
     let isLongPress = false;
     let touchIdentifier = null;
 
-    const audioContext = typeof window.AudioContext !== 'undefined' 
-      ? new (window.AudioContext || window.webkitAudioContext)() 
-      : null;
+    // ✅ 关键：在用户手势中初始化音频
+    function initAudio() {
+      if (audioUnlocked || !window.AudioContext) return;
+      try {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        // 立即播放一个静音声音解锁
+        const buffer = audioContext.createBuffer(1, 1, 22050);
+        const source = audioContext.createBufferSource();
+        source.buffer = buffer;
+        source.connect(audioContext.destination);
+        source.start(0);
+        audioUnlocked = true;
+      } catch (e) {
+        console.warn("Audio init failed:", e);
+      }
+    }
 
     function playPopSound(pitch = 300) {
+      if (!audioUnlocked) return; // 不再尝试初始化
       if (!soundEnabled || !audioContext) return;
+      
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
       oscillator.type = 'sine';
@@ -328,6 +345,7 @@
 
     function handleStart(e) {
       e.preventDefault();
+      initAudio(); // ✅ 在用户手势中初始化音频
       const clientX = isTouchDevice ? e.touches[0].clientX : e.clientX;
       const clientY = isTouchDevice ? e.touches[0].clientY : e.clientY;
       
@@ -359,6 +377,7 @@
     function handleEnd(e) {
       if (!isPressing) return;
       e.preventDefault();
+      initAudio(); // ✅ 确保音频已初始化
       
       let endX, endY;
       if (isTouchDevice) {
@@ -388,7 +407,6 @@
         sizeLabel = null;
         createBubble(pressX, pressY, currentRadius);
       } else {
-        // 检查是否点在泡泡上
         let clickedBubble = null;
         for (let i = bubbles.length - 1; i >= 0; i--) {
           if (isPointInBubble(endX, endY, bubbles[i])) {
@@ -427,7 +445,10 @@
 
     document.body.addEventListener('contextmenu', (e) => e.preventDefault());
 
-    document.getElementById('toggle-sound').addEventListener('click', () => {
+    // ✅ 喇叭按钮：先初始化音频，再切换状态
+    document.getElementById('toggle-sound').addEventListener('click', (e) => {
+      e.stopPropagation();
+      initAudio(); // 确保点击喇叭也能解锁音频
       soundEnabled = !soundEnabled;
       document.getElementById('toggle-sound').textContent = soundEnabled ? '🔊' : '🔇';
     });
