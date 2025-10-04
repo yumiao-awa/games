@@ -110,6 +110,7 @@
     let pressX = 0;
     let pressY = 0;
     let isLongPress = false;
+    let touchIdentifier = null;
 
     const audioContext = typeof window.AudioContext !== 'undefined' 
       ? new (window.AudioContext || window.webkitAudioContext)() 
@@ -183,14 +184,14 @@
         color: color
       };
 
-      // 泡泡点击只爆裂
-      bubble.addEventListener('click', (e) => {
-        e.stopPropagation();
-        explodeBubble(obj);
-      });
-
       bubbles.push(obj);
       return obj;
+    }
+
+    function isPointInBubble(x, y, bubble) {
+      const dx = x - bubble.x;
+      const dy = y - bubble.y;
+      return dx * dx + dy * dy <= bubble.radius * bubble.radius;
     }
 
     function explodeBubble(bubble) {
@@ -330,6 +331,10 @@
       const clientX = isTouchDevice ? e.touches[0].clientX : e.clientX;
       const clientY = isTouchDevice ? e.touches[0].clientY : e.clientY;
       
+      if (isTouchDevice) {
+        touchIdentifier = e.touches[0].identifier;
+      }
+      
       pressX = clientX;
       pressY = clientY;
       currentRadius = 20;
@@ -355,22 +360,47 @@
       if (!isPressing) return;
       e.preventDefault();
       
+      let endX, endY;
+      if (isTouchDevice) {
+        let touch = null;
+        for (let i = 0; i < e.changedTouches.length; i++) {
+          if (e.changedTouches[i].identifier === touchIdentifier) {
+            touch = e.changedTouches[i];
+            break;
+          }
+        }
+        if (!touch) return;
+        endX = touch.clientX;
+        endY = touch.clientY;
+      } else {
+        endX = e.clientX;
+        endY = e.clientY;
+      }
+      
       clearTimeout(pressTimer);
       isPressing = false;
+      touchIdentifier = null;
       
       if (isLongPress && previewBubble) {
-        // 长按结束：生成自定义泡泡
         previewBubble.remove();
         sizeLabel.remove();
         previewBubble = null;
         sizeLabel = null;
         createBubble(pressX, pressY, currentRadius);
       } else {
-        // 快速点击：但必须确保不是点在泡泡上
-        const target = isTouchDevice ? e.changedTouches[0].target : e.target;
-        if (!target.classList.contains('bubble') && 
-            target.id !== 'toggle-sound') {
-          createBubble(pressX, pressY);
+        // 检查是否点在泡泡上
+        let clickedBubble = null;
+        for (let i = bubbles.length - 1; i >= 0; i--) {
+          if (isPointInBubble(endX, endY, bubbles[i])) {
+            clickedBubble = bubbles[i];
+            break;
+          }
+        }
+        
+        if (clickedBubble) {
+          explodeBubble(clickedBubble);
+        } else if (e.target.id !== 'toggle-sound') {
+          createBubble(endX, endY);
         }
       }
     }
@@ -385,7 +415,6 @@
       updatePreview();
     }
 
-    // 统一事件绑定（不再单独监听 click）
     if (isTouchDevice) {
       document.body.addEventListener('touchstart', handleStart, { passive: false });
       document.body.addEventListener('touchend', handleEnd, { passive: false });
