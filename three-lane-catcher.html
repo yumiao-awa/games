@@ -147,7 +147,12 @@
     const LANE_WIDTH = 100;
     const PLAYER_WIDTH = 80;
     const BALL_SIZE = 30;
-    const PLAYER_Y = 500 - 20 - 20;
+    const GAME_HEIGHT = 500;
+    const PLAYER_HEIGHT = 20;
+    const PLAYER_BOTTOM_GAP = 20;
+    
+    // ✅ 关键：方块顶部 Y 坐标
+    const PLAYER_TOP_Y = GAME_HEIGHT - PLAYER_BOTTOM_GAP - PLAYER_HEIGHT; // 500 - 20 - 20 = 460
 
     let playerLane = 1;
     let balls = [];
@@ -156,7 +161,7 @@
     let highScore = localStorage.getItem('catcherHighScore') || 0;
     let gameRunning = true;
     let spawnRate = 1500;
-    let lastSpawn = 0; // ✅ 将在 restart 中重置
+    let lastSpawn = 0;
 
     const gameArea = document.getElementById('game-area');
     const player = document.getElementById('player');
@@ -191,7 +196,6 @@
       });
     }
 
-    // ✨ 创建粒子效果
     function createParticles(x, y, color) {
       const particleCount = 8;
       for (let i = 0; i < particleCount; i++) {
@@ -226,11 +230,14 @@
         ball.y += ball.speed;
         ball.el.style.top = `${ball.y}px`;
 
-        if (ball.y > 500) {
+        const ballBottom = ball.y + BALL_SIZE;
+
+        // ✅ 关键修复：当小球底部到达方块顶部时，立即判定
+        if (ballBottom >= PLAYER_TOP_Y) {
           if (ball.x === playerLane) {
-            // ✅ 接住：产生粒子 + 得分
+            // 接住
             const centerX = ball.x * LANE_WIDTH + LANE_WIDTH / 2;
-            const centerY = 500 - 30; // 球底部位置
+            const centerY = ball.y + BALL_SIZE / 2; // 球中心
             createParticles(centerX, centerY, ball.color);
             
             score += 10;
@@ -245,6 +252,12 @@
             return;
           }
         }
+
+        // 移除已飞出屏幕的小球（安全兜底）
+        if (ball.y > GAME_HEIGHT) {
+          ball.el.remove();
+          balls.splice(i, 1);
+        }
       }
     }
 
@@ -253,7 +266,7 @@
         const p = particles[i];
         p.x += p.vx;
         p.y += p.vy;
-        p.vy += 0.1; // 重力
+        p.vy += 0.1;
         p.life--;
         
         if (p.life <= 0) {
@@ -280,7 +293,6 @@
     }
 
     function restart() {
-      // ✅ 关键修复：重置 lastSpawn
       balls.forEach(ball => ball.el.remove());
       particles.forEach(p => p.el.remove());
       balls = [];
@@ -288,7 +300,7 @@
       score = 0;
       playerLane = 1;
       spawnRate = 1500;
-      lastSpawn = 0; // 🚀 修复：重启后能生成新球！
+      lastSpawn = 0;
       gameRunning = true;
       scoreEl.textContent = `得分: ${score}`;
       document.getElementById('game-over').style.display = 'none';
