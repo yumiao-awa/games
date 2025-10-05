@@ -305,6 +305,7 @@
       scoreEl.textContent = `得分: ${score}`;
       document.getElementById('game-over').style.display = 'none';
       updatePlayerPosition();
+      location.reload();//这里实在不知道怎么修复无法彻底重开的bug了才加的这一句qwq
     }
 
     function movePlayer(direction) {
