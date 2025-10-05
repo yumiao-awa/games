@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>古筝五音 · 自由光球</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      background: linear-gradient(135deg, #e6f7ff, #fff3e0);
+      font-family: 'Segoe UI', sans-serif;
+      text-align: center;
+      color: #333;
+    }
+    h1 {
+      font-size: 2em;
+      margin-bottom: 10px;
+      color: #4a6fa5;
+    }
+    #instructions {
+      max-width: 300px;
+      margin: 15px auto;
+      font-size: 0.95em;
+      color: #718096;
+    }
+    #game-area {
+      position: relative;
+      width: min(600px, 90vw);
+      height: 500px;
+      margin: 0 auto;
+      background: #f8fafc;
+      border: 2px solid #cbd5e0;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .buttons-container {
+      position: absolute;
+      bottom: 20px;
+      left: 0;
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 10px;
+    }
+    .note-btn {
+      width: calc((100% - 40px) / 5); /* 5 个按钮，4 个间隙 */
+      height: 60px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 18px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    .note-btn:hover {
+      transform: scale(1.05);
+    }
+    .light-ball {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      box-shadow: 0 0 10px currentColor;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>古筝五音 · 自由光球</h1>
+  <div id="instructions">
+    点击下方按钮，弹奏五音。<br>
+    光球会从按钮飞向天空，享受自由演奏吧！
+  </div>
+
+  <div id="game-area">
+    <!-- 按钮容器 -->
+    <div class="buttons-container">
+      <div class="note-btn" style="background: #e53e3e;" data-note="do">宫<br>Do</div>
+      <div class="note-btn" style="background: #38a169;" data-note="re">商<br>Re</div>
+      <div class="note-btn" style="background: #d69e2e;" data-note="mi">角<br>Mi</div>
+      <div class="note-btn" style="background: #805ad5;" data-note="sol">徵<br>Sol</div>
+      <div class="note-btn" style="background: #dd6b20;" data-note="la">羽<br>La</div>
+    </div>
+  </div>
+
+  <script>
+    // 五声音阶频率（C调）
+    const NOTES = {
+      do: 261.63,
+      re: 293.66,
+      mi: 329.63,
+      sol: 392.00,
+      la: 440.00
+    };
+
+    let audioContext = null;
+
+    function initAudio() {
+      if (audioContext) return;
+      try {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      } catch (e) {
+        console.warn("AudioContext not available");
+      }
+    }
+
+    function playNote(frequency) {
+      if (!audioContext) return;
+      
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+      gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+      
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.start();
+      oscillator.stop(audioContext.currentTime + 0.3);
+    }
+
+    function createLightBall(x, y, color) {
+      const ball = document.createElement('div');
+      ball.className = 'light-ball';
+      ball.style.left = `${x - 6}px`;
+      ball.style.top = `${y - 6}px`;
+      ball.style.color = color;
+      document.body.appendChild(ball);
+
+      let progress = 0;
+      const duration = 1000; // 1秒飞到顶部
+      const startY = y;
+      const endY = 0;
+
+      function animate() {
+        progress += 10;
+        const t = Math.min(progress / duration, 1);
+        const currentY = startY + (endY - startY) * t;
+        ball.style.top = `${currentY}px`;
+        ball.style.opacity = 1 - t;
+
+        if (t < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          ball.remove();
+        }
+      }
+
+      animate();
+    }
+
+    // 绑定按钮点击
+    document.querySelectorAll('.note-btn').forEach((btn, index) => {
+      btn.addEventListener('click', () => {
+        initAudio();
+        const note = btn.getAttribute('data-note');
+        const frequency = NOTES[note];
+        playNote(frequency);
+
+        // 获取按钮中心坐标
+        const rect = btn.getBoundingClientRect();
+        const x = rect.left + rect.width / 2;
+        const y = rect.top + rect.height;
+        const color = window.getComputedStyle(btn).backgroundColor;
+        createLightBall(x, y, color);
+      });
+    });
+
+    // 键盘控制
+    window.addEventListener('keydown', (e) => {
+      if (e.key >= '1' && e.key <= '5') {
+        const index = parseInt(e.key) - 1;
+        const btn = document.querySelectorAll('.note-btn')[index];
+        if (btn) {
+          btn.click();
+        }
+      }
+    });
+  </script>
+</body>
+</html>
